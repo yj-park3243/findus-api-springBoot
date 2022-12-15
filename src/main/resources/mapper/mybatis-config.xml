@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+
+    <typeAliases>
+        <!-- 유저 -->
+        <typeAlias type="com.findus.findus.model.user.UserVO" alias="userVO"/>
+        <!-- 게시판 -->
+        <typeAlias type="com.findus.findus.model.board.BoardVO" alias="boardVO"/>
+        <typeAlias type="com.findus.findus.model.work.WorkVO" alias="workVO"/>
+        <typeAlias type="com.findus.findus.model.board.BoardCategoryVO" alias="boardCategoryVO"/>
+        <typeAlias type="com.findus.findus.model.work.WorkCategoryVO" alias="workCategoryVO"/>
+        <typeAlias type="com.findus.findus.model.work.WorkApplyVO" alias="workApplyVO"/>
+        <typeAlias type="com.findus.findus.model.board.CommentVo" alias="commentVo"/>
+        <typeAlias type="com.findus.findus.model.common.LogVO" alias="logVO"/>
+        <typeAlias type="com.findus.findus.model.report.ReportVO" alias="reportVO"/>
+
+        <!-- 위치 -->
+        <typeAlias type="com.findus.findus.model.location.LocationVO" alias="locationVO"/>
+
+
+    </typeAliases>
+
+</configuration>

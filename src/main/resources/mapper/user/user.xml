@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.findus.findus.api.user.UserMapper">
+
+    <select id="getUserInfo" resultType="HashMap" parameterType="userVo"  >
+        /* UserMapper.getUserInfo */
+        SELECT
+            auth_token,
+            user_name,
+            user_nickname,
+            use_yn,
+            profile_url,
+            user_email,
+            DATE_FORMAT(create_date , '%Y-%m-%d %H:%i:%s') as create_date,
+            DATE_FORMAT(update_date , '%Y-%m-%d %H:%i:%s') as update_date
+        FROM CLIENT
+        where AUTH_TOKEN =  #{auth_token}
+    </select>
+
+    <select id="isUserExist" resultType="int" parameterType="userVo"  >
+        /* UserMapper.isUserExist */
+        SELECT count(*)
+        FROM CLIENT
+        where AUTH_TOKEN =  #{auth_token}
+    </select>
+
+    <insert id="insertUserInfo" parameterType="userVO"  >
+        /* UserMapper.insertUserInfo */
+        INSERT INTO CLIENT(
+             auth_token,
+             user_name,
+             user_email,
+             user_nickname,
+             use_yn,
+             update_date,
+             email_verification
+         ) VALUES (
+            #{auth_token},
+            #{user_name},
+            #{user_email},
+            #{user_nickname},
+            1,
+            NOW(),
+            #{email_verification}
+         )
+    ON DUPLICATE KEY
+    UPDATE UPDATE_DATE = NOW()
+    </insert>
+
+    <update id="updateUserInfo" parameterType="userVO"  >
+        /* UserMapper.updateUserInfo */
+        UPDATE CLIENT
+        SET
+        <if test='@mybatis.MybatisCheck@notEmpty(user_nickname)'>
+            user_nickname = #{user_nickname} ,
+        </if>
+        <if test='@mybatis.MybatisCheck@notEmpty(user_email)'>
+            user_email = #{user_email} ,
+        </if>
+        <if test='@mybatis.MybatisCheck@notEmpty(profile_url)'>
+            PROFILE_URL = #{profile_url},
+        </if>
+        UPDATE_DATE = NOW()
+        WHERE 1=1
+        AND auth_token = #{auth_token}
+    </update>
+
+    <select id="getVersion" resultType="HashMap" >
+        /* UserMapper.getVersion */
+        SELECT
+            VERSION_NAME,
+            VERSION_VALUE
+        FROM VERSION
+    </select>
+
+    <select id="isExistNickName" resultType="int" parameterType="string" >
+        /* UserMapper.getVersion */
+        SELECT
+            count(1)
+        FROM CLIENT
+        where user_nickname = #{value}
+    </select>
+
+    <insert id="insertLog" parameterType="userVo" >
+INSERT INTO LOGIN_HISTORY ( AUTH_TOKEN, CREATE_DATE, LOGIN_LAT, LOGIN_LNG, IP , PLATFORM)
+VALUES( #{auth_token}, now(), #{user_lat}, #{user_lng}, #{ip} , #{platform})
+    </insert>
+
+    <insert id="insertBanUser" parameterType="HashMap">
+        insert into CLIENT_BAN (AUTH_TOKEN , BAN_USER_TOKEN)
+        values ( #{auth_token} , #{ ban_token } )
+    </insert>
+
+    <delete id="deleteBanUser" parameterType="HashMap">
+        delete from CLIENT_BAN
+        where BAN_ID = #{ban_id}
+        and auth_token = #{auth_token}
+    </delete>
+
+    <select id="getBanUserList" parameterType="HashMap" resultType="HashMap">
+        SELECT
+            cb.ban_id,
+            cb.ban_user_token,
+            c.user_nickname
+        from CLIENT_BAN cb
+        left join CLIENT c on cb.ban_user_token = c.auth_token
+        where cb.auth_token = #{auth_token}
+    <if test='@mybatis.MybatisCheck@notEmpty( ban_token )'>
+        and cb.BAN_USER_TOKEN = #{ ban_token }
+    </if>
+    </select>
+
+</mapper>

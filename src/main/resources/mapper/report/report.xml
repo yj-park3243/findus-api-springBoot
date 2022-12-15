@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.findus.findus.api.report.ReportMapper">
+    <insert id="insertReport" parameterType="reportVO" >
+INSERT INTO REPORT (
+    auth_token,
+    report_type,
+    report_type_id,
+    report_title,
+    report_content
+)
+VALUES(
+    #{auth_token},
+    #{report_type},
+    #{report_type_id},
+    #{report_title},
+    #{report_content}
+)
+    </insert>
+</mapper>

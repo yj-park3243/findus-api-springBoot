@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.findus.findus.api.board.BoardMapper">
+
+    <select id="getBoardCategoryList" parameterType="boardVO" resultType="HashMap">
+        /*BoardMapper.getBoardCategoryList 게시판 종류*/
+        SELECT  board_category_id,
+            category_name_${language} category_name
+        FROM BOARD_CATEGORY
+        WHERE USE_YN = 1
+        ORDER BY SORT ASC
+    </select>
+
+    <select id="getBoardList" parameterType="boardVO" resultType="HashMap">
+        /*BoardMapper.getBoardList 게시판 목록 */
+        SELECT
+            B.board_id,
+            B.board_category_id,
+            B.subject,
+            B.content ,
+            /*B.notice_yn,*/
+            B.like_cnt recommend_cnt,
+            B.views,
+            CL.user_nickname,
+            CL.profile_url ,
+            IFNULL( comment_cnt , 0) comment_cnt,
+            case when like_cnt >= 30 then true else false end is_best
+         FROM BOARD B
+        LEFT JOIN ( SELECT board_id , COUNT(1) comment_cnt FROM COMMENT c GROUP BY BOARD_ID) c  ON c.board_id=B.board_id
+        LEFT JOIN CLIENT CL on B.auth_token = CL.auth_token
+        WHERE 1=1
+        <if test="board_category_id != 0">
+            AND B.BOARD_CATEGORY_ID = #{board_category_id}
+        </if>
+        <if test="board_category_id == 0">
+            AND B.auth_token = #{auth_token}
+        </if>
+          AND B.USE_YN = 1
+        <if test='@mybatis.MybatisCheck@notEmpty(search_txt)'>
+            and (subject like concat('%',#{search_txt},'%') or content like concat('%',#{search_txt},'%') or user_nickname like concat('%',#{search_txt},'%') )
+        </if>
+        <if test='is_best == 1'>
+            and like_cnt >= 30
+        </if>
+        and B.auth_token not in (select BAN_USER_TOKEN from CLIENT_BAN where auth_token = #{auth_token})
+        ORDER BY BOARD_ID DESC
+        LIMIT #{pageUnit} OFFSET #{firstIndex}
+    </select>
+
+    <select id="getBoardListTotCnt" parameterType="boardVO" resultType="int">
+        /*BoardMapper.getBoardListTotCnt 게시판 목록 총 갯수*/
+        SELECT count(1)
+        FROM BOARD B
+        WHERE 1=1
+        <if test="board_category_id != 0">
+            AND B.BOARD_CATEGORY_ID = #{board_category_id}
+        </if>
+        <if test="board_category_id == 0">
+            AND B.auth_token = #{auth_token}
+        </if>
+          AND B.USE_YN = 1
+        <if test='@mybatis.MybatisCheck@notEmpty(search_txt)'>
+            and (subject like concat('%',#{search_txt},'%') or content like concat('%',#{search_txt},'%') or user_nickname like concat('%',#{search_txt},'%') )
+        </if>
+        <if test='is_best == 1'>
+            and like_cnt >= 30
+        </if>
+        and B.auth_token not in (select BAN_USER_TOKEN from CLIENT_BAN where auth_token = #{auth_token})
+    </select>
+
+    <select id="getBoardDetail" parameterType="boardVO" resultType="HashMap">
+        /*BoardMapper.getBoardDetail 게시판 상세 */
+        SELECT
+            B.board_id,
+            B.board_category_id,
+            B.subject ,
+            B.content ,
+            /*B.notice_yn ,*/
+            B.use_yn ,
+            B.create_date ,
+            B.update_date ,
+            B.auth_token ,
+            B.like_cnt recommend_cnt,
+            B.views ,
+            CL.user_nickname ,
+            CL.profile_url ,
+            IFNULL( comment_cnt , 0) comment_cnt,
+            IFNULL( is_like , 0) is_like
+         FROM BOARD B
+         LEFT JOIN ( SELECT  COUNT(1) comment_cnt
+                     FROM COMMENT
+                     where board_id = #{board_id} ) L  ON 1=1
+         LEFT JOIN ( SELECT  COUNT(1) is_like
+                     FROM BOARD_LIKE bl
+                     where bl.board_id = #{board_id}
+                       and bl.board_category_id = #{board_category_id}
+                       and bl.auth_token = #{auth_token}) islike  ON 1=1
+        LEFT JOIN CLIENT CL on B.auth_token = CL.auth_token
+        WHERE 1=1
+          AND B.BOARD_ID = #{board_id}
+
+        <if test="board_category_id != 0">
+            AND B.BOARD_CATEGORY_ID = #{board_category_id}
+        </if>
+          AND B.USE_YN = 1
+    </select>
+
+    <select id="getBoardComment" parameterType="boardVO" resultType="HashMap">
+        /*BoardMapper.getBoardComment 게시판 댓글 */
+        SELECT
+            B.comment_id ,
+            B.board_id ,
+            B.parent_comment ,
+            B.use_yn,
+            case B.use_yn when 1 then B.comment else 'deleted comment' end comment ,
+            B.create_date ,
+            /*B.update_date ,*/
+            B.auth_token ,
+            CL.user_nickname ,
+            B.comment_like_cnt ,
+            IFNULL( is_like , 0) is_like,
+            CL.profile_url
+         FROM COMMENT B
+         left join (select comment_id , count(1) is_like
+                    from COMMENT_LIKE cl
+                    where cl.board_id = #{board_id}
+                      and cl.auth_token = #{auth_token} group by comment_id) cl
+         on cl.comment_id = B.comment_id
+         LEFT JOIN CLIENT CL on B.auth_token = CL.auth_token
+        WHERE 1=1
+          AND B.BOARD_ID = #{board_id}
+          and B.auth_token not in (select BAN_USER_TOKEN from CLIENT_BAN where auth_token = #{auth_token})
+        ORDER BY COMMENT_ID asc
+    </select>
+
+    <insert id="insertBoard" parameterType="boardVO">
+        /* BoardMapper.insertBoard 게시판 insert */
+        INSERT INTO BOARD (
+             BOARD_CATEGORY_ID,
+             SUBJECT,
+             CONTENT,
+             NOTICE_YN,
+             AUTH_TOKEN
+         )
+        VALUES (
+            #{board_category_id},
+            #{subject},
+            #{content},
+            0,
+            #{auth_token}
+        )
+        <selectKey keyProperty="board_id" resultType="Integer">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <update id="updateBoard" parameterType="boardVO">
+        /* BoardMapper.updateBoard 게시글 수정 */
+        UPDATE
+            BOARD
+        SET
+        <if test='@mybatis.MybatisCheck@notEmpty(subject)'>
+            SUBJECT = #{subject},
+        </if>
+        <if test='@mybatis.MybatisCheck@notEmpty(content)'>
+            CONTENT = #{content},
+        </if>
+
+        <if test='@mybatis.MybatisCheck@notEmpty(use_yn)'>
+            USE_YN = #{use_yn},
+        </if>
+            UPDATE_DATE = NOW()
+        WHERE 1=1
+          AND BOARD_ID = #{board_id}
+    </update>
+    <update id="deleteBoard" parameterType="boardVO">
+        /* BoardMapper.updateBoard 게시글 수정 */
+        UPDATE
+        BOARD
+        SET
+            USE_YN = 0,
+            UPDATE_DATE = NOW()
+        WHERE 1=1
+        AND BOARD_ID = #{board_id}
+    </update>
+
+    <insert id="insertComment" parameterType="commentVo">
+        /* BoardMapper.insertComment 댓글 insert */
+        INSERT INTO COMMENT (
+            BOARD_ID,
+            PARENT_COMMENT,
+            COMMENT,
+            AUTH_TOKEN
+        )
+        VALUES (
+            #{board_id},
+            #{parent_comment},
+            #{comment},
+            #{auth_token}
+        )
+    </insert>
+
+    <update id="updateComment" parameterType="commentVo">
+        /* BoardMapper.updateComment 댓글 수정*/
+        UPDATE
+            COMMENT
+        SET
+        <if test='@mybatis.MybatisCheck@notEmpty(comment)'>
+            COMMENT = #{comment} ,
+        </if>
+        <if test='@mybatis.MybatisCheck@notEmpty(use_yn)'>
+            USE_YN = #{use_yn},
+        </if>
+            UPDATE_DATE = NOW()
+        WHERE 1=1
+          AND BOARD_ID = #{board_id}
+          AND COMMENT_ID = #{comment_id}
+    </update>
+
+    <update id="deleteComment" parameterType="commentVo">
+        /* BoardMapper.updateComment 댓글 수정*/
+        UPDATE
+            COMMENT
+        SET
+            USE_YN = 0,
+            UPDATE_DATE = NOW()
+        WHERE 1=1
+        AND BOARD_ID = #{board_id}
+        AND COMMENT_ID = #{comment_id}
+    </update>
+
+    <update id="updateBoardViews" parameterType="boardVO">
+        /* BoardMapper.updateBoardViews 조회수 update*/
+        UPDATE BOARD
+        SET VIEWS = VIEWS + 1,
+        UPDATE_DATE = NOW()
+        WHERE 1=1
+        AND BOARD_ID = #{board_id}
+    </update>
+
+    <select id="getBoardLike" parameterType="boardVO" resultType="int">
+        /* BoardMapper.getBoardLike 좋아요 여부 */
+        select count(1)
+        from BOARD_LIKE
+        where 1=1
+          and board_id = #{board_id}
+          and board_category_id = #{board_category_id}
+          and auth_token = #{auth_token}
+    </select>
+    <update id="insertBoardLike" parameterType="boardVO">
+        /* BoardMapper.insertBoardLike 게시글 좋아요 insert */
+        INSERT INTO BOARD_LIKE
+            (BOARD_ID
+            , BOARD_CATEGORY_ID
+            , AUTH_TOKEN
+            , CREATE_DATE
+            ) VALUES (
+             #{board_id}
+             , #{board_category_id}
+             , #{auth_token}
+             , NOW()
+            )
+    </update>
+    <update id="deleteBoardLike" parameterType="boardVO">
+        /* BoardMapper.insertBoardLike 게시글 좋아요 삭제 */
+        delete from BOARD_LIKE
+        where 1=1
+        and board_id = #{board_id}
+        and board_category_id = #{board_category_id}
+        and auth_token = #{auth_token}
+    </update>
+    <update id="updateBoardLikeCnt" parameterType="boardVO">
+        /* BoardMapper.updateBoardLikeCnt 게시글 좋아요 수 */
+        UPDATE BOARD
+        SET like_cnt = (select count(1)
+                             from BOARD_LIKE
+                             where 1=1
+                               and board_id = #{board_id}
+                               and board_category_id = #{board_category_id}),
+            UPDATE_DATE = NOW()
+        WHERE 1=1
+          AND BOARD_ID = #{board_id}
+    </update>
+
+    <select id="getCommentLike" parameterType="commentVo" resultType="int">
+        /* BoardMapper.getCommentLike 댓글 좋아요 여부 */
+        select count(1)
+        from COMMENT_LIKE
+        where 1=1
+          and comment_id = #{comment_id}
+          and board_id = #{board_id}
+          and auth_token = #{auth_token}
+    </select>
+    <update id="insertCommentLike" parameterType="commentVo">
+        /* BoardMapper.getCommentLike 댓글 좋아요 insert */
+        INSERT INTO COMMENT_LIKE
+        (
+             COMMENT_ID
+             , BOARD_ID
+             , AUTH_TOKEN
+             , CREATE_DATE
+        ) VALUES (
+              #{comment_id}
+             , #{board_id}
+             , #{auth_token}
+             , NOW()
+         )
+    </update>
+    <update id="deleteCommentLike" parameterType="commentVo">
+        /* BoardMapper.getCommentLike 댓글 좋아요 삭제 */
+        delete from COMMENT_LIKE
+        where 1=1
+        and comment_id = #{comment_id}
+        and board_id = #{board_id}
+        and auth_token = #{auth_token}
+    </update>
+    <update id="updateCommentLikeCnt" parameterType="commentVo">
+        /* BoardMapper.updateCommentLikeCnt 댓글 좋아요 update */
+        UPDATE COMMENT
+        SET comment_like_cnt = (select count(1)
+                                     from COMMENT_LIKE
+                                     where 1=1
+                                       and comment_id = #{comment_id}
+                                       and board_id = #{board_id} ) ,
+            UPDATE_DATE = NOW()
+        WHERE 1=1
+          AND comment_id = #{comment_id}
+          and board_id = #{board_id}
+    </update>
+
+</mapper>

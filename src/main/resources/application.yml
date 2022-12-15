@@ -1,0 +1,67 @@
+server:
+  port: 8090
+
+# database
+spring:
+  jmx:
+    enabled: true
+  datasource:
+    hikari:
+      jdbc-url: jdbc-url
+      username: root
+      password: password
+      driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+
+##s3
+cloud:
+  aws:
+    credentials:
+      accessKey: accessKey
+      secretKey: secretKey
+    s3:
+      bucket: findus-app-data
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+
+mode: local
+common:
+  filePath: filePath
+logging:
+  file:
+    path: ~/logs/findus
+  level:
+    org.springframework: info
+
+googleAPI:
+  url: https://maps.googleapis.com/maps/api/geocode/json
+  key: key
+
+# Swagger
+springdoc:
+  version: v1.0.0
+  api-docs:
+    groups:
+      enabled: true
+  show-actuator: true
+  cache:
+    disabled: true
+  model-and-view-allowed: true
+
+  swagger-ui:
+    path: /docs/ui
+    operationsSorter: method
+    enabled: true
+    tags-sorter: alpha
+    tryItOutEnabled: true
+    displayRequestDuration: true
+    displayOperationId: true
+    syntaxHighlight:
+      activated: true
+      theme: tomorrow-night
+    use-root-path: true
+    persistAuthorization: true
+    filter: true
+    docExpansion: none
+

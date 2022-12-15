@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.findus.findus.api.location.LocationMapper">
+
+    <select id="getLocationList" parameterType="userVO" resultType="HashMap">
+        /*LocationMapper.getLocationList*/
+        select l.location_id
+             , l.latitude
+             , l.longitude
+             , l.location_name_${language} location_name
+
+             , l.address1_en
+             , l.address2_en
+
+             , l.address1_ko
+             , l.address2_ko
+
+             , l.location_phone
+             , l.description
+
+             , lc.location_category_id
+             , lc.category_name_${language} category_name
+             , li.image_url
+             , case
+                when lo.open_time <![CDATA[ <= ]]>  DATE_FORMAT(now(),'%T') and DATE_FORMAT(now(),'%T') <![CDATA[ <= ]]> lo.close_time then 1
+                 else 0
+                end is_open /*영업중 , 마감 */
+             , case
+                   when lo.open_time <![CDATA[ <= ]]>  DATE_FORMAT(now(),'%T') and DATE_FORMAT(now(),'%T') <![CDATA[ <= ]]> lo.close_time then date_format(lo.close_time , '%H:%i')   /* 영업종료시간 */
+                   else date_format(lo.next_open_time , '%H:%i')  /* 다음영업오픈시간 */
+               end open_close_time
+
+            ,case
+                when lo.open_time <![CDATA[ <= ]]>  DATE_FORMAT(now(),'%T') and DATE_FORMAT(now(),'%T') <![CDATA[ <= ]]> lo.close_time then '' /*영업중일때*/
+                else (select day_name_${language}
+                       from DAY
+                       where day_id = lo.next_open_day_type ) end open_day
+            <if test='@mybatis.MybatisCheck@notEmpty(user_lat)'>
+                , (6371 * acos ( cos ( radians( #{user_lat}) )* cos( radians( latitude ) )* cos( radians( longitude ) -
+                radians(#{user_lng}) )+ sin ( radians(${user_lat}) ) * sin( radians( latitude ) ))) As distance /* 거리 */
+            </if>
+            , l.arr_yn
+            , l.parent_id
+            , l.location_floor
+            , l.room_number
+        from LOCATION l
+             left join MAPPING_LOCATION_CATEGORY mlc
+                       on mlc.location_id = l.location_id and mlc.parent_category_yn = 1
+             left join LOCATION_CATEGORY lc on mlc.location_category_id = lc.location_category_id and lc.use_yn = 1
+             left join LOCATION_OPENTIME lo on lo.location_id = l.location_id and lo.use_yn = 1 and  lo.day_type= DAYOFWEEK(now())
+             left join LOCATION_IMAGES li on l.location_id = li.location_id and li.parent_yn = 1
+        where l.use_yn = 1
+        <if test='@mybatis.MybatisCheck@notEmpty(user_lat)'>
+            order by distance
+        </if>
+        <if test='@mybatis.MybatisCheck@empty(user_lat)'>
+            order by location_id
+        </if>
+    </select>
+
+    <select id="getLocationListTotCnt" parameterType="userVO" resultType="int">
+        /*LocationMapper.getLocationListTotCnt*/
+        SELECT count(1)
+        FROM LOCATION L
+        WHERE L.USE_YN = 1
+    </select>
+
+    <select id="getLocationCategory" parameterType="userVO" resultType="HashMap">
+        /*LocationMapper.getLocationCategory*/
+        select location_category_id
+             , category_name_${language} category_name
+             , category_name_en category_name_en
+        from LOCATION_CATEGORY lc
+        where lc.use_yn = 1
+        order by sort
+    </select>
+
+    <select id="getLocationImages" parameterType="locationVO" resultType="HashMap">
+        /*LocationMapper.getLocationImages*/
+        SELECT
+            image_id,
+            image_url
+        FROM
+            LOCATION_IMAGES li
+        where li.location_id = #{location_id}
+          and li.use_yn = 1
+        order by image_id
+    </select>
+
+    <select id="getLocationOpenTime" parameterType="locationVO" resultType="HashMap">
+        /*LocationMapper.getLocationOpenTime*/
+        SELECT
+            opentime_id,
+            day_type,
+            DATE_FORMAT(open_time , '%H:%i') open_time,
+            DATE_FORMAT(close_time , '%H:%i') close_time
+            , (select day_name_${language}
+               from DAY
+               where day_id = lo.day_type ) open_day
+            , case day_type
+                when 2 then 1
+                when 3 then 2
+                when 4 then 3
+                when 5 then 4
+                when 6 then 5
+                when 7 then 6
+                when 1 then 7
+                else 0
+            end sort
+        FROM
+            LOCATION_OPENTIME lo
+        where location_id = #{location_id}
+        and use_yn = 1
+        order by sort
+    </select>
+
+    <update id="tempLocationAddr" parameterType="HashMap">
+        update LOCATION
+set ADDRESS1_KO = #{address1_ko}
+, ADDRESS1_en = #{address1_en}
+, ADDRESS2_KO = '15층 205호'
+, ADDRESS2_en = '15 floor 205 ho'
+where location_id = #{location_id}
+    </update>
+</mapper>

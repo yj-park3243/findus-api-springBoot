@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.findus.findus.api.work.WorkMapper">
+
+    <select id="getWorkCategoryList" parameterType="workVO" resultType="HashMap">
+        /*WorkMapper.getWorkCategoryList 게시판 종류*/
+        SELECT work_category_id,
+               WORK_CATEGORY_NAME_${language} work_category_name
+        FROM WORK_CATEGORY
+        WHERE USE_YN = 1
+        ORDER BY SORT ASC
+    </select>
+
+    <select id="getWorkRegionList" parameterType="workVO" resultType="HashMap">
+        /*WorkMapper.getWorkCategoryList 지역 */
+        SELECT work_region_id,
+               REGION_NAME_${language} region_name
+        FROM WORK_REGION
+        WHERE USE_YN = 1
+        ORDER BY SORT ASC
+    </select>
+
+    <select id="getWorkList" parameterType="workVO" resultType="HashMap">
+        /*WorkMapper.getWorkList 일자리 게시판 목록 */
+        SELECT
+            w.work_id
+            , w.work_region_id
+            , w.work_category_id
+            , w.auth_token
+            , w.subject
+            , w.content
+
+            , w.work_addr1_en
+            , w.work_addr2_en
+            , w.work_addr1_ko
+            , w.work_addr2_ko
+
+            , w.work_lat
+            , w.work_lng
+            , w.work_phone
+            , w.work_pay
+            , cl.user_nickname
+            , cl.profile_url
+            , w.end_date
+            , w.create_date
+            , w.update_date
+            , w.use_yn
+            , w.views
+            , wr.region_name_${language} region_name
+            , wc.work_category_name_${language} work_category_name
+        FROM WORK w
+        LEFT JOIN WORK_REGION wr on w.WORK_REGION_ID = wr.WORK_REGION_ID
+        LEFT JOIN WORK_CATEGORY wc on w.WORK_CATEGORY_ID = wc.WORK_CATEGORY_ID
+        LEFT JOIN CLIENT cl on w.auth_token = cl.auth_token
+        where 1=1
+        and w.use_yn = 1
+        <if test='@mybatis.MybatisCheck@notEmpty(search_txt)'>
+            and (
+            subject like concat('%',#{search_txt},'%')
+            or content like concat('%',#{search_txt},'%')
+            or cl.user_nickname like concat('%',#{search_txt},'%')
+            or work_addr1_en like concat('%',#{search_txt},'%')
+            or work_addr2_en like concat('%',#{search_txt},'%')
+            or work_addr1_ko like concat('%',#{search_txt},'%')
+            or work_addr2_ko like concat('%',#{search_txt},'%')
+            )
+        </if>
+        <if test='work_region_id != 0'>
+            and w.work_region_id = #{work_region_id}
+        </if>
+        <if test='work_category_id != 0'>
+            and w.work_category_id = #{work_category_id}
+        </if>
+        <if test='before_work != 1'>
+            and DATE_FORMAT(now(), "%Y-%m-%d") <![CDATA[ <= ]]> END_DATE
+        </if>
+
+        <if test='my_work == 1'>
+            and w.auth_token = #{auth_token}
+        </if>
+        and w.auth_token not in (select BAN_USER_TOKEN from CLIENT_BAN where auth_token = #{auth_token})
+        order by work_id desc
+        LIMIT #{pageUnit} OFFSET #{firstIndex}
+    </select>
+
+    <select id="getWorkListTotCnt" parameterType="workVO" resultType="int">
+        /*WorkMapper.getWorkListTotCnt 일자리 게시판 목록 총 갯수*/
+        SELECT count(1)
+        FROM WORK w
+        LEFT JOIN CLIENT cl on w.auth_token = cl.auth_token
+        where 1=1
+        and w.use_yn = 1
+        <if test='@mybatis.MybatisCheck@notEmpty(search_txt)'>
+            and (
+            subject like concat('%',#{search_txt},'%')
+            or content like concat('%',#{search_txt},'%')
+            or cl.user_nickname like concat('%',#{search_txt},'%')
+            or work_addr1_en like concat('%',#{search_txt},'%')
+            or work_addr2_en like concat('%',#{search_txt},'%')
+            or work_addr1_ko like concat('%',#{search_txt},'%')
+            or work_addr2_ko like concat('%',#{search_txt},'%')
+            )
+        </if>
+        <if test='work_region_id != 0'>
+            and w.work_region_id = #{work_region_id}
+        </if>
+        <if test='work_category_id != 0'>
+            and w.work_category_id = #{work_category_id}
+        </if>
+        <if test='before_work != 1'>
+            and DATE_FORMAT(now(), "%Y-%m-%d") <![CDATA[ <= ]]> END_DATE
+        </if>
+        <if test='my_work == 1'>
+            and w.auth_token = #{auth_token}
+        </if>
+        and w.auth_token not in (select BAN_USER_TOKEN from CLIENT_BAN where auth_token = #{auth_token})
+    </select>
+
+    <select id="getWorkDetail" parameterType="workVO" resultType="HashMap">
+        /*WorkMapper.getWorkDetail 게시판 상세 */
+        SELECT w.work_id
+             , w.work_region_id
+             , w.work_category_id
+             , w.auth_token
+             , w.subject
+             , w.content
+             , w.work_addr1_en
+             , w.work_addr2_en
+             , w.work_addr1_ko
+             , w.work_addr2_ko
+             , w.work_lat
+             , w.work_lng
+             , w.work_phone
+             , cl.user_nickname
+             , cl.profile_url
+             , w.views
+             , w.work_pay
+             , w.end_date
+             , w.create_date
+             , w.update_date
+             , w.use_yn
+             , wr.region_name_${language}        region_name
+             , wc.work_category_name_${language} work_category_name
+        FROM WORK w
+                 LEFT JOIN WORK_REGION wr on w.WORK_REGION_ID = wr.WORK_REGION_ID
+                 LEFT JOIN WORK_CATEGORY wc on w.WORK_CATEGORY_ID = wc.WORK_CATEGORY_ID
+                 LEFT JOIN CLIENT cl on w.auth_token = cl.auth_token
+        where 1 = 1
+        and w.work_id = #{work_id}
+    </select>
+
+    <insert id="insertWork" parameterType="workVO">
+/* WorkMapper.insertWork */
+INSERT INTO WORK (
+    WORK_REGION_ID
+    , WORK_CATEGORY_ID
+    , AUTH_TOKEN
+    , SUBJECT
+    , CONTENT
+    , WORK_ADDR1_en
+    , WORK_ADDR2_en
+    , WORK_ADDR1_ko
+    , WORK_ADDR2_ko
+    , WORK_LAT
+    , WORK_LNG
+    , WORK_PHONE
+    , WORK_PAY
+    , END_DATE
+)
+VALUES(
+    #{work_region_id}
+    , #{work_category_id}
+    , #{auth_token}
+    , #{subject}
+    , #{content}
+    , #{work_addr1_en}
+    , #{work_addr2_en}
+    , #{work_addr1_ko}
+    , #{work_addr2_ko}
+    , #{work_lat}
+    , #{work_lng}
+    , #{work_phone}
+    , #{work_pay}
+    , #{end_date}
+)
+<selectKey keyProperty="work_id" resultType="Integer">
+    SELECT LAST_INSERT_ID()
+</selectKey>
+    </insert>
+
+    <update id="updateWork" parameterType="workVO">
+/* WorkMapper.updateWork */
+UPDATE WORK
+SET
+    subject = #{subject},
+    content = #{content},
+    work_addr1_en = #{work_addr1_en},
+    work_addr2_en = #{work_addr2_en},
+    work_addr1_ko = #{work_addr1_ko},
+    work_addr2_ko = #{work_addr2_ko},
+    work_lat = #{work_lat},
+    work_lng = #{work_lng},
+    work_phone = #{work_phone},
+    work_pay = #{work_pay},
+    end_date = #{end_date},
+    update_date = now()
+WHERE
+    WORK_ID = #{work_id}
+    </update>
+
+    <update id="deleteWork" parameterType="workVO">
+/* BoardMapper.updateBoard 게시글 수정 */
+UPDATE WORK
+SET
+    USE_YN = 0,
+    UPDATE_DATE = NOW()
+WHERE 1=1
+and WORK_ID = #{work_id}
+    </update>
+    <update id="updateWorkViews" parameterType="workVO">
+/* WorkMapper.updateWorkBoardViews  */
+UPDATE WORK
+SET VIEWS       = VIEWS + 1,
+    UPDATE_DATE = NOW()
+WHERE 1 = 1
+  AND WORK_ID = #{work_id}
+    </update>
+</mapper>
